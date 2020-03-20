@@ -87,6 +87,7 @@ integration-test-misc:
 	@ ./scripts/integration-test.sh -run "$(RUN_ARG)"
 
 .PHONY: images
+images: export GOPROXY=http://mirrors.aliyun.com/goproxy/
 images:
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build ${BUILD_ARG} --build-arg=GOARCH=$(GOARCH) -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .

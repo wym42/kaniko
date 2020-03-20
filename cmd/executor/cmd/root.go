@@ -102,6 +102,7 @@ var RootCmd = &cobra.Command{
 		if err := os.Chdir("/"); err != nil {
 			exit(errors.Wrap(err, "error changing to root dir"))
 		}
+		appendHosts(opts)
 		image, err := executor.DoBuild(opts)
 		if err != nil {
 			exit(errors.Wrap(err, "error building image"))
@@ -125,6 +126,21 @@ var RootCmd = &cobra.Command{
 			f.WriteString(s)
 		}
 	},
+}
+
+func appendHosts(opts *config.KanikoOptions) {
+	if opts.HostAliases != "" {
+		hosts := strings.Split(opts.HostAliases, ",")
+		fd, err := os.OpenFile("/etc/hosts", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			logrus.Warn("append hosts %s failed, %v", opts.HostAliases, err)
+			return
+		}
+		defer fd.Close()
+		for _, host := range hosts {
+			fd.WriteString(strings.ReplaceAll(host, ":", "\t") + "\n")
+		}
+	}
 }
 
 // addKanikoOptionsFlags configures opts
@@ -154,6 +170,7 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
+	RootCmd.PersistentFlags().StringVarP(&opts.HostAliases, "hostAliases", "", "10.193.28.1:registry.vivo.bj04.xyz", "add ip hostname to /etc/hosts")
 	opts.RegistriesCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.RegistryMirror, "registry-mirror", "", "", "Registry mirror to use has pull-through cache instead of docker.io.")
