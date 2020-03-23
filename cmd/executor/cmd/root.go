@@ -36,6 +36,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/src-d/go-git.v4"
 )
 
 var (
@@ -68,6 +69,21 @@ var RootCmd = &cobra.Command{
 
 			if !opts.NoPush && len(opts.Destinations) == 0 {
 				return errors.New("You must provide --destination, or use --no-push")
+			}
+			//
+			if len(opts.Destinations) != 0 && len(opts.TagFormat) != 0 && len(strings.Split(opts.Destinations.String(), ":")) == 1 {
+				tag := strings.ReplaceAll(opts.TagFormat, "${DATE}", time.Now().Format("20060102150405"))
+				commit := "unknown"
+				if src, err := git.PlainOpen(opts.SrcContext); err == nil {
+					if head, err := src.Head(); err != nil && head != nil {
+						commit = head.Hash().String()
+						if len(commit) > 8 {
+							commit = commit[:8]
+						}
+					}
+				}
+				tag = strings.ReplaceAll(tag, "${COMMIT}", commit)
+				opts.Destinations.Set(opts.Destinations.String() + ":" + tag)
 			}
 			if err := cacheFlagsValid(); err != nil {
 				return errors.Wrap(err, "cache flags invalid")
@@ -170,7 +186,8 @@ func addKanikoOptionsFlags() {
 	RootCmd.PersistentFlags().DurationVarP(&opts.CacheTTL, "cache-ttl", "", time.Hour*336, "Cache timeout in hours. Defaults to two weeks.")
 	RootCmd.PersistentFlags().VarP(&opts.InsecureRegistries, "insecure-registry", "", "Insecure registry using plain HTTP to push and pull. Set it repeatedly for multiple registries.")
 	RootCmd.PersistentFlags().VarP(&opts.SkipTLSVerifyRegistries, "skip-tls-verify-registry", "", "Insecure registry ignoring TLS verify to push and pull. Set it repeatedly for multiple registries.")
-	RootCmd.PersistentFlags().StringVarP(&opts.HostAliases, "hostAliases", "", "10.193.28.1:registry.vivo.bj04.xyz", "add ip hostname to /etc/hosts")
+	RootCmd.PersistentFlags().StringVarP(&opts.HostAliases, "host-aliases", "", "", "add ip hostname to /etc/hosts")
+	RootCmd.PersistentFlags().StringVarP(&opts.TagFormat, "tag-format", "", "${DATE}-${COMMIT}", "image tags")
 	opts.RegistriesCertificates = make(map[string]string)
 	RootCmd.PersistentFlags().VarP(&opts.RegistriesCertificates, "registry-certificate", "", "Use the provided certificate for TLS communication with the given registry. Expected format is 'my.registry.url=/path/to/the/server/certificate'.")
 	RootCmd.PersistentFlags().StringVarP(&opts.RegistryMirror, "registry-mirror", "", "", "Registry mirror to use has pull-through cache instead of docker.io.")
