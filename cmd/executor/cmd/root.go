@@ -71,20 +71,29 @@ var RootCmd = &cobra.Command{
 				return errors.New("You must provide --destination, or use --no-push")
 			}
 			//
-			if len(opts.Destinations) != 0 && len(opts.TagFormat) != 0 && len(strings.Split(opts.Destinations.String(), ":")) == 1 {
+			logrus.Infof("Destinations %v", opts.Destinations)
+			for index, dest := range opts.Destinations {
+				if len(strings.Split(dest, ":")) != 1 {
+					continue
+				}
 				tag := strings.ReplaceAll(opts.TagFormat, "${DATE}", time.Now().Format("20060102150405"))
 				commit := "unknown"
 				if src, err := git.PlainOpen(opts.SrcContext); err == nil {
-					if head, err := src.Head(); err != nil && head != nil {
+					if head, err := src.Head(); err == nil && head != nil {
 						commit = head.Hash().String()
 						if len(commit) > 8 {
 							commit = commit[:8]
 						}
 					}
+				} else {
+					logrus.Warningf("get .git failed %v", err)
 				}
+
 				tag = strings.ReplaceAll(tag, "${COMMIT}", commit)
-				opts.Destinations.Set(opts.Destinations.String() + ":" + tag)
+				opts.Destinations [index] = dest + ":" + tag
 			}
+			logrus.Infof("Destinations: %v", opts.Destinations)
+
 			if err := cacheFlagsValid(); err != nil {
 				return errors.Wrap(err, "cache flags invalid")
 			}
