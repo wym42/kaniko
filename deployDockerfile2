@@ -34,7 +34,7 @@ RUN chmod +x /go/src/github.com/GoogleContainerTools/kaniko/executor
 # RUN make GOARCH=${GOARCH}
 ENV GO111MODULE = on
 ENV export GOFLAGS = -mod=vendor
-RUN cd /go/src/github.com/GoogleContainerTools/kaniko/out/executor && go build -o executor && chmod +x executor
+RUN cd /go/src/github.com/GoogleContainerTools/kaniko/cmd/executor && go build -o executor && chmod +x executor
 
 FROM scratch
 COPY --from=0 /go/src/github.com/GoogleContainerTools/kaniko/cmd/executor/executor /kaniko/executor
